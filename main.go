@@ -42,6 +42,7 @@ type GetCommentsResults struct {
 }
 
 type GetCommentsResultsArray struct { //GetCommentsResults Array
+	Status   string
 	Comments []GetCommentsResults
 }
 
@@ -69,7 +70,7 @@ func ApiHandler(w http.ResponseWriter, r *http.Request, AdminHASH string) { //TH
 
 	switch jsondata.APP {
 	case "GetComments":
-		GetComments(w, jsondata)
+		GetComments(w, r, jsondata)
 	case "WriteComment":
 		WriteComment(w, jsondata)
 	default:
@@ -86,9 +87,9 @@ func WriteComment(w http.ResponseWriter, jsondata API2STRUCT) {
 	fmt.Println("Api2Handler-WriteComment")
 }
 
-func GetComments(w http.ResponseWriter, jsondata API2STRUCT) {
+func GetComments(w http.ResponseWriter, r *http.Request, jsondata API2STRUCT) {
 
-	ids, err := db.Query("SELECT  ID, Name, Title, Text, upvotes, downvotes FROM gosocial_comments WHERE slug = ? AND ModRelease = '1' ORDER BY submitTime DESC LIMIT 1000")
+	ids, err := db.Query("SELECT  ID, Name, Title, Text, upvotes, downvotes FROM gosocial_comments WHERE slug = ? AND ModRelease = '1' ORDER BY submitTime DESC LIMIT 1000", jsondata.Slug)
 	defer ids.Close()
 	checkErr(err)
 	var TMP []GetCommentsResults
@@ -120,9 +121,13 @@ func GetComments(w http.ResponseWriter, jsondata API2STRUCT) {
 		TMP = append(TMP, GetCommentsResults{id, NameTMP, TitleTMP, TextTMP, upvotes, downvotes, ClassTMP})
 	}
 
-	lists := GetCommentsResultsArray{TMP}
+	lists := GetCommentsResultsArray{"OK", TMP}
 
-	GetCommentsTemplate.Execute(w, lists)
+	jData, err := json.Marshal(lists)
+	checkErr(err)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jData)
 
 	fmt.Println("Api2Handler-GetComment")
 }
