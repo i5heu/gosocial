@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -18,23 +19,30 @@ func Init(dbTMP *sql.DB) {
 }
 
 type API2STRUCT struct {
-	PWD    string
-	APP    string
-	ID     int
-	Title1 string
-	Text1  string
+	PWD   string
+	APP   string
+	ID    int
+	Slug  string
+	Name  string
+	Title string
+	Text  string
 }
 
 func ApiHandler(w http.ResponseWriter, r *http.Request, AdminHASH string) { //THIS ONE IS WORKING WITH jsondataRequests
 	startAPI2 := time.Now()
 
-	APILogin := false
-
 	decoder := json.NewDecoder(r.Body)
 	var jsondata API2STRUCT
 	errSearch := decoder.Decode(&jsondata)
-	if errSearch != nil {
-		fmt.Fprintf(w, `{"Status":"ERROR"}`)
+
+	switch {
+	case errSearch == io.EOF: //if API reqest is empty, the server will return the js code
+		fmt.Fprintf(w, "<h1>THIS IS UNDER DEV</h1>")
+		fmt.Println("SERVE JS")
+		return
+	case errSearch != nil:
+		bar := `{"Status":"` + errSearch.Error() + `"}`
+		fmt.Fprintf(w, bar)
 		fmt.Println(errSearch)
 		checkErr(errSearch)
 		return
@@ -47,11 +55,14 @@ func ApiHandler(w http.ResponseWriter, r *http.Request, AdminHASH string) { //TH
 		fmt.Fprintf(w, `{"Status":"ERROR - NO METHOD"}`)
 	}
 
-	fmt.Println("Api2Handler:", time.Since(startAPI2), APILogin)
+	fmt.Println("Api2Handler:", time.Since(startAPI2))
 }
 
 func WriteComment(w http.ResponseWriter, jsondata API2STRUCT) {
-	fmt.Println("Api2Handler")
+	db.Exec("INSERT INTO gosocial_comments(slug,Name,Title,Text) VALUES(?,?,?,?)", jsondata.Slug, jsondata.Name, jsondata.Title, jsondata.Text)
+
+	fmt.Fprintf(w, `{"Status": "OK"}`)
+	fmt.Println("Api2Handler-WriteComment")
 }
 
 func checkErr(err error) {
