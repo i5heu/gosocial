@@ -51,7 +51,7 @@ type GetCommentsResultsArray struct { //GetCommentsResults Array
 
 var GetCommentsTemplate *template.Template
 
-func ApiHandler(w http.ResponseWriter, r *http.Request, AdminHASH string) { //THIS ONE IS WORKING WITH jsondataRequests
+func ApiHandler(w http.ResponseWriter, r *http.Request, AdminHASH string) (AppMethod string, Title string, Text string) { //THIS ONE IS WORKING WITH jsondataRequests
 	startAPI2 := time.Now()
 
 	decoder := json.NewDecoder(r.Body)
@@ -75,7 +75,7 @@ func ApiHandler(w http.ResponseWriter, r *http.Request, AdminHASH string) { //TH
 	case "GetComments":
 		GetComments(w, r, jsondata, AdminHASH)
 	case "WriteComment":
-		WriteComment(w, jsondata)
+		Title, Text = WriteComment(w, jsondata)
 	case "ModerateComment":
 		ModerateComment(w, r, jsondata, AdminHASH)
 	default:
@@ -83,6 +83,8 @@ func ApiHandler(w http.ResponseWriter, r *http.Request, AdminHASH string) { //TH
 	}
 
 	fmt.Println("Api2Handler:", time.Since(startAPI2))
+	AppMethod = jsondata.APP
+	return
 }
 
 func ModerateComment(w http.ResponseWriter, r *http.Request, jsondata API2STRUCT, AdminHASH string) {
@@ -99,11 +101,14 @@ func ModerateComment(w http.ResponseWriter, r *http.Request, jsondata API2STRUCT
 	fmt.Println("Api2Handler-ModerateComment")
 }
 
-func WriteComment(w http.ResponseWriter, jsondata API2STRUCT) {
+func WriteComment(w http.ResponseWriter, jsondata API2STRUCT) (Title string, Text string) {
 	db.Exec("INSERT INTO gosocial_comments(slug,Name,Title,Text) VALUES(?,?,?,?)", jsondata.Slug, jsondata.Name, jsondata.Title, jsondata.Text)
 
+	Title = jsondata.Title
+	Text = jsondata.Text
 	fmt.Fprintf(w, `{"Status": "OK"}`)
 	fmt.Println("Api2Handler-WriteComment")
+	return
 }
 
 func GetComments(w http.ResponseWriter, r *http.Request, jsondata API2STRUCT, AdminHASH string) {
